@@ -16,6 +16,7 @@ import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     LocationManager locationManager;
     LocationListener locationListener;
+    Location globalLocation;
 
 
     @Override
@@ -37,7 +39,10 @@ public class MainActivity extends AppCompatActivity {
         locationListener = new LocationListener() {
             @Override
             public void onLocationChanged(@NonNull Location location) {
-                updateLocationInfo(location);
+                globalLocation = location;
+                ExampleRunnable runnable = new ExampleRunnable();
+                new Thread(runnable).start();
+                //updateLocationInfo(location);
             }
             @Override
             public void onStatusChanged(String s, int i, Bundle bundle){
@@ -64,7 +69,10 @@ public class MainActivity extends AppCompatActivity {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
                 Location location = locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if(location != null){
-                    updateLocationInfo(location);
+                    globalLocation = location;
+                    ExampleRunnable runnable = new ExampleRunnable();
+                    new Thread(runnable).start();
+                    //updateLocationInfo(location);
                 }
 
             }
@@ -82,18 +90,31 @@ public class MainActivity extends AppCompatActivity {
         TextView lonTextView = (TextView) findViewById(R.id.longitude);
         TextView altTextView = (TextView) findViewById(R.id.altitude);
         TextView accTextView = (TextView) findViewById(R.id.accuracy);
-        latTextView.setText("Latitude: " + location.getLatitude());
-        lonTextView.setText("Longitude: " + location.getLongitude());
-        altTextView.setText("Altitude: " + location.getAltitude());
-        accTextView.setText("Accuracy: " + location.getAccuracy());
+
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                latTextView.setText("Latitude: " + location.getLatitude());
+                lonTextView.setText("Longitude: " + location.getLongitude());
+                altTextView.setText("Altitude: " + location.getAltitude());
+                accTextView.setText("Accuracy: " + location.getAccuracy());
+            }
+        });
 
         Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
 
-        /*try{
+        try{
             String address = "Could not find address";
+
+            String latitude = Double.toString(location.getLatitude());
+            latitude = latitude.substring(0, 6);
+            String longitude = Double.toString(location.getLongitude());
+            longitude = longitude.substring(0, 6);
+
             List<Address> listAddresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
 
-            /*if(listAddresses != null && listAddresses.size() > 0) {
+            if(listAddresses != null && listAddresses.size() > 0) {
 
                 Log.i("PlaceInfo", listAddresses.get(0).toString());
                 address = "Address: \n";
@@ -115,12 +136,18 @@ public class MainActivity extends AppCompatActivity {
 
             }
 
-            TextView addressTextView = (TextView) findViewById(R.id.address);
-            addressTextView.setText(address);
+            String finalAddress = address;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    TextView addressTextView = (TextView) findViewById(R.id.address);
+                    addressTextView.setText(finalAddress);
+                }
+            });
 
         } catch(IOException e) {
             e.printStackTrace();
-        }*/
+        }
 
     }
 
@@ -136,6 +163,16 @@ public class MainActivity extends AppCompatActivity {
 
         if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
             startListening();
+        }
+    }
+
+    class ExampleRunnable implements Runnable {
+        @Override
+        public void run() {
+
+            Location location = globalLocation;
+
+            updateLocationInfo(location);
         }
     }
 
